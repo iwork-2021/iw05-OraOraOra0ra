@@ -180,11 +180,63 @@ class ViewController: UIViewController {
   }
 
   func processObservations(for request: VNRequest, error: Error?) {
-    //call show function
+      //call show function
+      if let results = request.results as? [VNRecognizedObjectObservation] {
+          if results.isEmpty {
+              print("Nothing found...")
+          }
+          else {
+              self.show(predictions: results)
+          }
+      }
+      else if let error = error {
+          print("Error: \(error.localizedDescription)")
+      }
+      else {
+          print("???")
+      }
   }
 
   func show(predictions: [VNRecognizedObjectObservation]) {
-   //process the results, call show function in BoundingBoxView
+      //process the results, call show function in BoundingBoxView
+      DispatchQueue.main.async {
+          var index = 0
+          
+          for i in 0..<predictions.count {
+              if i >= self.maxBoundingBoxViews {
+                  break
+              }
+          
+              let result = predictions[i].labels[0]
+              if result.confidence > 0.8 {
+                  let box = predictions[i].boundingBox
+                  let label = String(format:"%@: %.1f%%", result.identifier, result.confidence * 100)
+                  let color = self.colors[result.identifier]
+                  //let frame = VNImageRectForNormalizedRect(box, Int(self.view.bounds.width), Int(self.view.bounds.height))
+                  let width = self.view.bounds.width
+                  let height = width * 1280 / 720
+                  let frame = box.applying(CGAffineTransform.identity.scaledBy(x: width, y: height)).applying(CGAffineTransform(scaleX: 1, y: -1).translatedBy(x: 0, y: -(height + self.view.bounds.height)/2))
+                  
+                  let boxView = self.boundingBoxViews[i]
+                  //boxView.show(frame: frame, label: label, color: color!)
+                  boxView.show(frame: frame, label: label, color: color!)
+                  index+=1
+              }
+          }
+          
+          if index < self.maxBoundingBoxViews {
+              self.hide(index: index)
+          }
+      }
+      
+    }
+    
+    func hide(index:Int) {
+        for i in index...maxBoundingBoxViews-1 {
+            boundingBoxViews[i].hide()
+        }
+    }
+    
 }
 
 extension ViewController: VideoCaptureDelegate {
